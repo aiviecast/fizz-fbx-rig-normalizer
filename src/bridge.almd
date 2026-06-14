@@ -1,0 +1,33 @@
+// wasm エントリ — ブラウザのリグ正規化 (FBX ロード時) から呼ぶ。
+//
+// 文字列の受け渡し: rig_alloc(len) でちょうど len バイトのバッファを確保し、その
+// 線形メモリオフセットを JS に返す。JS はそこにボーン名の UTF-8 を書き、rig_match()
+// を呼ぶ。戻り値は VRM ボーン index (Float、-1 で対応無し) なので、JS は index から
+// 自分の持つ VRM ボーン名リストを引く(文字列を返さずに済む = 出力ブリッジ不要)。
+//
+// 戻り/引数は Float = JS から number で扱える。tree-shaking 対策で main から参照
+// (almide#440)。ビルド: almide build src/bridge.almd --target wasm -o build/rig.wasm
+
+import self as rig
+import bytes
+import float
+import int
+
+// ボーン名書き込み用バッファ(name の長さちょうど)。
+var g_buf: Bytes = bytes.new(0)
+
+@export(wasm, "rig_alloc")
+fn rig_alloc(len: Float) -> RawPtr = {
+  g_buf = bytes.new(float.to_int(len))
+  bytes.as_mut_ptr(g_buf)
+}
+
+// バッファに書かれたボーン名を VRM スロット index (-1=未対応) に解決する。
+@export(wasm, "rig_match")
+fn rig_match() -> Float = int.to_float(rig.match_bone(bytes.to_string_lossy(g_buf)))
+
+effect fn main() -> Unit = {
+  let _a = rig_alloc(1.0)
+  let _b = rig_match()
+  ()
+}

@@ -1,0 +1,29 @@
+// CLI エントリポイント (native) — stdin の生ボーン名を VRM スロットに正規化する。
+//
+//   printf 'mixamorigLeftUpperArm\nHips\nUpperArm.R\n' | fizz-fbx-rig-normalizer
+//   mixamorigLeftUpperArm	leftUpperArm
+//   Hips	hips
+//   UpperArm.R	rightUpperArm
+//
+// stdin: 1 行 1 ボーン名 → stdout: "生名<TAB>VRMスロット" (対応無しは "(none)")。
+// FBX のボーン一覧をこれに流せば、どれがどの humanoid スロットか一覧できる。
+// EOF (空行) で終了。
+
+import self as rig
+import io
+import string
+
+effect fn main() -> Unit = {
+  var open = true
+  while open {
+    let line = io.read_line()
+    if string.trim(line) == "" then {
+      open = false
+    } else {
+      let raw = string.trim(line)
+      let idx = rig.match_bone(raw)
+      let slot = if idx < 0 then "(none)" else rig.bone_name(idx)
+      println(raw + "\t" + slot)
+    }
+  }
+}

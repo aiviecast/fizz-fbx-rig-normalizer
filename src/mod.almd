@@ -1,0 +1,73 @@
+// fizz_fbx_rig_normalizer — リグのボーン名 → VRM humanoid ボーンスロットの対応付け。
+//
+// 責務 (一行): FBX 等の生ボーン名 (Mixamo / Unity / Maya / Blender の各命名) を、
+// VRM humanoid のボーンスロット(hips / leftUpperArm …)に正規化する。
+//
+// §6 のうち「シーングラフ操作 (Three.js)」はブラウザ専用だが、**どの生ボーンが
+// どの VRM スロットか**という命名規約の知識はここに集約できる(純文字列処理)。
+// この対応表が単一の正本。ブラウザ/native の両方がここを参照する。
+//
+// 照合: `name.replace(/^mixamorig[:_]?/i, "").toLowerCase()` の完全一致
+//   (openaituber src/fbx/loader.ts normalizeBoneName と同一)。
+//   別名はすべて小文字で持つ。
+
+import string
+import list
+
+// VRM humanoid ボーンスロット (index 0..21)。match_bone はこの index を返す。
+fn vrm_bones() -> List[String] = [
+  "hips", "spine", "chest", "upperChest", "neck", "head",
+  "leftShoulder", "leftUpperArm", "leftLowerArm", "leftHand",
+  "rightShoulder", "rightUpperArm", "rightLowerArm", "rightHand",
+  "leftUpperLeg", "leftLowerLeg", "leftFoot", "leftToes",
+  "rightUpperLeg", "rightLowerLeg", "rightFoot", "rightToes",
+]
+
+// vrm_bones() と同じ順の別名リスト(全て小文字、重複は除去済み)。
+fn aliases() -> List[List[String]] = [
+  ["hips", "hip", "pelvis"],
+  ["spine"],
+  ["spine1", "chest"],
+  ["spine2", "upperchest"],
+  ["neck"],
+  ["head"],
+  ["leftshoulder", "l_shoulder", "l_clavicle", "shoulder.l", "shoulder_l", "shoulderl", "clavicle.l", "clavicle_l", "claviclel"],
+  ["leftarm", "leftupperarm", "l_upperarm", "l_shldr", "lshldr", "upperarm.l", "upperarm_l", "upperarml", "arm.l", "arm_l", "arml"],
+  ["leftforearm", "leftlowerarm", "l_forearm", "lforearm", "lowerarm.l", "lowerarm_l", "lowerarml", "forearm.l", "forearm_l", "forearml"],
+  ["lefthand", "l_hand", "lhand", "hand.l", "hand_l", "handl"],
+  ["rightshoulder", "r_shoulder", "r_clavicle", "shoulder.r", "shoulder_r", "shoulderr", "clavicle.r", "clavicle_r", "clavicler"],
+  ["rightarm", "rightupperarm", "r_upperarm", "r_shldr", "rshldr", "upperarm.r", "upperarm_r", "upperarmr", "arm.r", "arm_r", "armr"],
+  ["rightforearm", "rightlowerarm", "r_forearm", "rforearm", "lowerarm.r", "lowerarm_r", "lowerarmr", "forearm.r", "forearm_r", "forearmr"],
+  ["righthand", "r_hand", "rhand", "hand.r", "hand_r", "handr"],
+  ["leftupleg", "leftupperleg", "l_thigh", "lthigh", "upperleg.l", "upperleg_l", "upperlegl", "thigh.l", "thigh_l", "thighl"],
+  ["leftleg", "leftlowerleg", "l_shin", "l_calf", "lshin", "lowerleg.l", "lowerleg_l", "lowerlegl", "shin.l", "shin_l", "shinl", "calf.l", "calf_l", "calfl"],
+  ["leftfoot", "l_foot", "lfoot", "foot.l", "foot_l", "footl"],
+  ["lefttoebase", "lefttoes", "l_toe", "ltoe", "toes.l", "toes_l", "toesl", "toe.l", "toe_l", "toel", "toebase.l", "toebase_l", "toebasel"],
+  ["rightupleg", "rightupperleg", "r_thigh", "rthigh", "upperleg.r", "upperleg_r", "upperlegr", "thigh.r", "thigh_r", "thighr"],
+  ["rightleg", "rightlowerleg", "r_shin", "r_calf", "rshin", "lowerleg.r", "lowerleg_r", "lowerlegr", "shin.r", "shin_r", "shinr", "calf.r", "calf_r", "calfr"],
+  ["rightfoot", "r_foot", "rfoot", "foot.r", "foot_r", "footr"],
+  ["righttoebase", "righttoes", "r_toe", "rtoe", "toes.r", "toes_r", "toesr", "toe.r", "toe_r", "toer", "toebase.r", "toebase_r", "toebaser"],
+]
+
+// 生ボーン名を照合キーに正規化する: 先頭 "mixamorig" (+任意の ':' / '_') を外して小文字化。
+fn normalize_bone(raw: String) -> String = {
+  let lo = string.to_lower(raw)
+  let stripped = string.strip_prefix(lo, "mixamorig") ?? lo
+  // mixamorig を外したら直後の ':' / '_' も外す。
+  string.strip_prefix(stripped, ":") ?? (string.strip_prefix(stripped, "_") ?? stripped)
+}
+
+local fn scan(table: List[List[String]], norm: String, idx: Int) -> Int =
+  match list.get(table, idx) {
+    none     => 0 - 1,
+    // list.contains を使う (closure で norm をキャプチャすると native codegen が
+    // 壊れるため。almide のバグ — closure の非 Copy キャプチャ。issue 起票済み)。
+    some(al) => if list.contains(al, norm) then idx
+                else scan(table, norm, idx + 1),
+  }
+
+// 生ボーン名 → VRM ボーン index (0..21)、対応無しは -1。
+fn match_bone(raw: String) -> Int = scan(aliases(), normalize_bone(raw), 0)
+
+// index → VRM ボーン名 (範囲外は "")。
+fn bone_name(idx: Int) -> String = list.get(vrm_bones(), idx) ?? ""

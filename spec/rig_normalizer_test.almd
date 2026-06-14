@@ -1,0 +1,39 @@
+import self as rig
+
+test "normalize strips the mixamorig prefix (with :/_) and lowercases" {
+  assert_eq(rig.normalize_bone("mixamorigLeftUpperArm"), "leftupperarm")
+  assert_eq(rig.normalize_bone("mixamorig:LeftForeArm"), "leftforearm")
+  assert_eq(rig.normalize_bone("mixamorig_RightHand"), "righthand")
+  assert_eq(rig.normalize_bone("Hips"), "hips")
+}
+
+test "Mixamo names map to the right VRM slots" {
+  assert_eq(rig.match_bone("mixamorigHips"), 0)
+  assert_eq(rig.match_bone("mixamorigLeftArm"), 7)        // leftUpperArm
+  assert_eq(rig.match_bone("mixamorig:LeftForeArm"), 8)   // leftLowerArm
+  assert_eq(rig.match_bone("mixamorigRightHand"), 13)
+  assert_eq(rig.match_bone("mixamorigLeftToeBase"), 17)   // leftToes
+}
+
+test "Unity / plain humanoid names" {
+  assert_eq(rig.match_bone("LeftUpperArm"), 7)
+  assert_eq(rig.match_bone("RightUpperLeg"), 18)
+  assert_eq(rig.match_bone("Spine1"), 2)                  // chest
+  assert_eq(rig.match_bone("UpperChest"), 3)
+}
+
+test "Maya / Blender side-suffix conventions" {
+  assert_eq(rig.match_bone("UpperArm.R"), 11)             // rightUpperArm
+  assert_eq(rig.match_bone("L_UpperArm"), 7)
+  assert_eq(rig.match_bone("Thigh.L"), 14)                // leftUpperLeg
+  assert_eq(rig.match_bone("Foot_R"), 20)                 // rightFoot
+  assert_eq(rig.match_bone("Calf.L"), 15)                 // leftLowerLeg
+}
+
+test "unknown bones return -1; bone_name round-trips" {
+  assert_eq(rig.match_bone("SomeRandomBone"), 0 - 1)
+  assert_eq(rig.match_bone(""), 0 - 1)
+  assert_eq(rig.bone_name(7), "leftUpperArm")
+  assert_eq(rig.bone_name(0), "hips")
+  assert_eq(rig.bone_name(99), "")
+}
