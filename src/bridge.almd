@@ -14,17 +14,17 @@ import float
 import int
 
 // ボーン名書き込み用バッファ(name の長さちょうど)。
-var g_buf: Bytes = bytes.new(0)
+var g_buf: Bytes = bytes.zeros(0)
 
 @export(wasm, "rig_alloc")
 fn rig_alloc(len: Float) -> RawPtr = {
-  g_buf = bytes.new(float.to_int(len))
+  g_buf = bytes.zeros(int.from_saturating(len))
   bytes.as_mut_ptr(g_buf)
 }
 
 // バッファに書かれたボーン名を VRM スロット index (-1=未対応) に解決する。
 @export(wasm, "rig_match")
-fn rig_match() -> Float = int.to_float(rig.match_bone(bytes.to_string_lossy(g_buf)))
+fn rig_match() -> Float = float.from(rig.match_bone(bytes.to_string_lossy(g_buf)))
 
 effect fn main() -> Unit = {
   let _a = rig_alloc(1.0)
