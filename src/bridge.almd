@@ -10,6 +10,7 @@
 
 import self as rig
 import bytes
+import ffi
 import float
 import int
 
@@ -19,7 +20,7 @@ var g_buf: Bytes = bytes.zeros(0)
 @export(wasm, "rig_alloc")
 fn rig_alloc(len: Float) -> RawPtr = {
   g_buf = bytes.zeros(int.from_saturating(len))
-  bytes.as_mut_ptr(g_buf)
+  ffi.address(g_buf)
 }
 
 // バッファに書かれたボーン名を VRM スロット index (-1=未対応) に解決する。
