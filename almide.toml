@@ -1,4 +1,4 @@
 [package]
 name = "fizz_fbx_rig_normalizer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fizz FBX rig normalizer — map raw bone names (Mixamo/Unity/Maya/Blender) to VRM humanoid bone slots. One Almide core, native (CLI) + wasm (string->index bridge)."
